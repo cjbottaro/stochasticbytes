@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+
+  ansible:
+    image: cjbottaro/ansible:2.4.3.0
+    build:
+      context: ansible
+      args:
+        ALPINE_VERSION: 3.7
+        ANSIBLE_VERSION: 2.4.3.0
+    volumes:
+      - ./ansible:/ansible
+      - ./ansible/inventory.ini:/etc/ansible/hosts
+      - ~/.ssh/id_rsa:/root/.ssh/id_rsa
+    working_dir: /ansible
+    entrypoint: ["ansible-playbook"]
+
+
+  alpine-glibc:
+    image: cjbottaro/alpine-glibc:3.7
+    build:
+      context: alpine
+      args:
+        ALPINE_VERSION: 3.7
+        GLIBC_VERSION: 2.27-r0

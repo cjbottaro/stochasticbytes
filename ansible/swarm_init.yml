@@ -1,0 +1,114 @@
+---
+- hosts: all
+  gather_facts: False
+  tasks:
+    - name: Check for Python
+      raw: which python
+      register: python_check
+      failed_when: false
+      changed_when: false
+
+    - name: Bootstrap Ansible
+      raw: apk add python2
+      when: python_check.rc != 0
+
+- hosts: all
+  gather_facts: False
+  tasks:
+
+  - name: Add alpine-pkg-glibc repository key
+    get_url:
+      url: https://raw.githubusercontent.com/sgerrand/alpine-pkg-glibc/master/sgerrand.rsa.pub
+      dest: /etc/apk/keys/sgerrand.rsa.pub
+
+  - name: Install glibc
+    apk:
+      name: glibc, glibc-bin
+      repository: https://apkproxy.herokuapp.com/sgerrand/alpine-pkg-glibc
+
+  - name: Install Docker
+    apk:
+      name: docker
+      repository:
+        - http://dl-cdn.alpinelinux.org/alpine/edge/main
+        - http://dl-cdn.alpinelinux.org/alpine/edge/community
+
+  - name: Enable and start Docker
+    service:
+      name: docker
+      enabled: true
+      state: started
+
+  - name: Install docker-compose
+    get_url:
+      url: https://github.com/docker/compose/releases/download/1.19.0/docker-compose-Linux-x86_64
+      dest: /usr/local/bin/docker-compose
+      mode: 0755
+
+- hosts: main_manager
+  gather_facts: false
+  tasks:
+
+    - name: Check swarm status
+      shell: docker swarm join-token manager
+      register: swarm_check
+      failed_when: false
+      changed_when: false
+
+    - name: "Init swarm"
+      shell: "docker swarm init"
+      when: swarm_check.rc != 0
+
+    - name: "Get manager token"
+      shell: docker swarm join-token manager -q
+      register: manager_token
+      changed_when: false
+
+    - name: "Get worker token"
+      shell: docker swarm join-token worker -q
+      register: worker_token
+      changed_when: false
+
+- hosts: managers
+  gather_facts: false
+  tasks:
+
+    - name: Get main manager ip address
+      set_fact:
+        manager_ip_address: "{{ groups['main_manager'][0] }}"
+
+    - name: Get manager token
+      set_fact:
+        manager_token: "{{ hostvars[manager_ip_address].manager_token.stdout }}"
+
+    - name: Check swarm status
+      shell: "docker info | grep 'Swarm: inactive'"
+      register: swarm_check
+      failed_when: false
+      changed_when: false
+
+    - name: "Join swarm as manager"
+      shell: docker swarm join --token {{manager_token}} {{manager_ip_address}}:2377
+      when: swarm_check.rc == 0
+
+- hosts: workers
+  gather_facts: false
+  tasks:
+
+    - name: Get main manager ip address
+      set_fact:
+        manager_ip_address: "{{ groups['main_manager'][0] }}"
+
+    - name: Get worker token
+      set_fact:
+        worker_token: "{{ hostvars[manager_ip_address].worker_token.stdout }}"
+
+    - name: Check swarm status
+      shell: "docker info | grep 'Swarm: inactive'"
+      register: swarm_check
+      failed_when: false
+      changed_when: false
+
+    - name: "Join swarm as worker"
+      shell: docker swarm join --token {{worker_token}} {{manager_ip_address}}:2377
+      when: swarm_check.rc == 0
