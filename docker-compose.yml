@@ -24,3 +24,14 @@ services:
       args:
         ALPINE_VERSION: 3.7
         GLIBC_VERSION: 2.27-r0
+
+  openvpn:
+    image: cjbottaro/openvpn:latest
+    build:
+      context: openvpn
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./dallas.ovpn:/etc/vpn.ovpn
+      - ./auth.txt:/etc/vpn.auth
+    command: ["--config", "/etc/vpn.ovpn"]
