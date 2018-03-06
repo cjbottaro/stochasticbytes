@@ -48,3 +48,5 @@ nodes should be as easy as modifying `ansible/inventory.ini` and rerunning:
 ```
 docker-compose run --rm ansible swarm_init.yml
 ```
+
+Definitely just _add_ nodes. Don't try to change the role of an existing node.

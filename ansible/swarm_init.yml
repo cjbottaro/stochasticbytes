@@ -50,14 +50,14 @@
   tasks:
 
     - name: Check swarm status
-      shell: docker swarm join-token manager
+      shell: "docker info | grep 'Swarm: inactive'"
       register: swarm_check
       failed_when: false
       changed_when: false
 
     - name: "Init swarm"
       shell: "docker swarm init"
-      when: swarm_check.rc != 0
+      when: swarm_check.rc == 0
 
     - name: "Get manager token"
       shell: docker swarm join-token manager -q
