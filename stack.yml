@@ -1,0 +1,50 @@
+version: "3.4"
+
+services:
+
+  mongo:
+    image: mongo:3.2
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - nutrition_app
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+
+  elasticsearch:
+    image: elasticsearch:2.4-alpine
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - nutrition_app
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+
+  nutrition_app:
+    image: cjbottaro/nutrition_app:latest
+    command: puma -e production
+    environment:
+      RAILS_ENV: production
+    networks:
+      - nutrition_app
+    deploy:
+      replicas: 2
+      endpoint_mode: dnsrr
+
+volumes:
+
+  mongo-data:
+    name: mongo-data
+    driver: do_storage_v01:latest
+
+  es-data:
+    name: es-data
+    driver: do_storage_v01:latest
+
+networks:
+
+  nutrition_app:
+    driver: overlay
+    attachable: true
