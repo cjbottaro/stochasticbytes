@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/cjbottaro/hyperwave
-  revision: c826672c8c541d30465b28a2d99b98a908451081
+  revision: 13b01f892daa49a1f7bae1ec795972ca93c82567
   specs:
     hyperwave (0.1.0)
       colorize

@@ -22,6 +22,21 @@ services:
       replicas: 1
       endpoint_mode: dnsrr
 
+  nginx:
+    image: nginx:1.13-alpine
+    networks:
+      - nutrition_app
+    configs:
+      - source: nginx.conf
+        target: /etc/nginx/nginx.conf
+      - source: nutrition_app.conf
+        target: /etc/nginx/conf.d/nutrition_app.conf
+    ports:
+      - 80:80
+    deploy:
+      replicas: 2
+      endpoint_mode: vip
+
   nutrition_app:
     image: cjbottaro/nutrition_app:latest
     command: puma -e production
@@ -48,3 +63,11 @@ networks:
   nutrition_app:
     driver: overlay
     attachable: true
+
+configs:
+
+  nginx.conf:
+    external: true
+
+  nutrition_app.conf:
+    external: true
