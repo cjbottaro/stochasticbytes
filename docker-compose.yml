@@ -2,21 +2,6 @@ version: "3"
 
 services:
 
-  ansible:
-    image: cjbottaro/ansible:2.4.3.0
-    build:
-      context: ansible
-      args:
-        ALPINE_VERSION: 3.7
-        ANSIBLE_VERSION: 2.4.3.0
-    volumes:
-      - ./ansible:/ansible
-      - ./ansible/inventory.ini:/etc/ansible/hosts
-      - ~/.ssh/id_rsa:/root/.ssh/id_rsa
-    working_dir: /ansible
-    entrypoint: ["ansible-playbook"]
-
-
   alpine-glibc:
     image: cjbottaro/alpine-glibc:3.7
     build:
@@ -35,3 +20,26 @@ services:
       - ./dallas.ovpn:/etc/vpn.ovpn
       - ./auth.txt:/etc/vpn.auth
     command: ["--config", "/etc/vpn.ovpn"]
+
+  certificates:
+    image: cjbottaro/certificates
+    build:
+      context: certificates
+    volumes:
+      - ./secrets:/secrets
+    command:
+      - certonly
+      - --non-interactive
+      - --agree-tos
+      - -m cjbottaro@alumni.utexas.net
+      - --dns-dnsimple
+      - --dns-dnsimple-credentials=/secrets/dnsimple.ini
+      - -d nutrition.cjbotta.ro
+      - -d radarr.cjbotta.ro
+
+  radarr:
+    image: cjbottaro/radarr:0.2.0.995
+    build:
+      context: radarr
+      args:
+        RADARR_VERSION: 0.2.0.995

@@ -14,6 +14,8 @@ services:
 
   elasticsearch:
     image: elasticsearch:2.4-alpine
+    environment:
+      ES_HEAP_SIZE: 512m
     volumes:
       - es-data:/usr/share/elasticsearch/data
     networks:
@@ -31,8 +33,16 @@ services:
         target: /etc/nginx/nginx.conf
       - source: nutrition_app.conf
         target: /etc/nginx/conf.d/nutrition_app.conf
+      - source: radarr.conf
+        target: /etc/nginx/conf.d/radarr.conf
+    secrets:
+      - source: privkey.pem
+        target: /etc/nginx/privkey.pem
+      - source: fullchain.pem
+        target: /etc/nginx/fullchain.pem
     ports:
       - 80:80
+      - 443:443
     deploy:
       replicas: 2
       endpoint_mode: vip
@@ -70,4 +80,15 @@ configs:
     external: true
 
   nutrition_app.conf:
+    external: true
+
+  radarr.conf:
+    external: true
+
+secrets:
+
+  fullchain.pem:
+    external: true
+
+  privkey.pem:
     external: true
