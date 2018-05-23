@@ -50,3 +50,12 @@ docker-compose run --rm ansible swarm_init.yml
 ```
 
 Definitely just _add_ nodes. Don't try to change the role of an existing node.
+
+## Updating Let's Encrypt Certs
+
+```
+docker-compose run --rm certificates
+bundle exec ruby media_server/init.rb
+```
+
+Then ssh onto the media server and restart Nginx.
