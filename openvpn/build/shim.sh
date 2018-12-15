@@ -1,6 +1,6 @@
 #!/bin/sh
 
-mkdir /dev/net
+mkdir -p /dev/net
 mknod /dev/net/tun c 10 200
 
-openvpn $@
+exec openvpn $@

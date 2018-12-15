@@ -1,0 +1,9 @@
+control_username: cjbottaro
+servers:
+  - id: Server1
+    name: newshosting
+    host: news.newshosting.com
+    port: 563
+    username: cjbottaro
+    encryption: "yes"
+    connections: 60

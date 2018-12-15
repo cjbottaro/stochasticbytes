@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openvpn
+  labels:
+    app: openvpn
+data:
+  vpn.ovpn: |
+{{ .Files.Get "config/vpn.ovpn" | indent 4 }}

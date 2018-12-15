@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nzbget
+  labels:
+    app: nzbget
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nzbget
+  template:
+    metadata:
+      labels:
+        app: nzbget
+    spec:
+
+      volumes:
+        {{- include "vpn-volumes" $ | indent 8 }}
+        - name: nzbget
+          hostPath:
+            path: /mnt/media/nzbget
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: config
+          configMap:
+            name: nzbget
+
+      containers:
+        {{- include "vpn-container" $ | indent 8 }}
+
+        - name: nzbget
+          image: cjbottaro/nzbget:latest
+          command:
+            - ./nzbget
+            - -s
+          volumeMounts:
+            - name: dev-net
+              mountPath: /dev/net
+            - name: nzbget
+              mountPath: /nzbget/downloads
+            - name: config
+              mountPath: /nzbget/nzbget.conf
+              subPath: nzbget.conf
+            - name: localtime
+              mountPath: /etc/localtime
