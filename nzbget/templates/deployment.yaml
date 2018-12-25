@@ -45,3 +45,5 @@ spec:
               subPath: nzbget.conf
             - name: localtime
               mountPath: /etc/localtime
+          ports:
+            - containerPort: 6789
