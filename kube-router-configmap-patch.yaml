@@ -1,0 +1,25 @@
+# Enable hostPort: https://github.com/cloudnativelabs/kube-router/blob/master/docs/user-guide.md#hostport-support
+data:
+  cni-conf.json: |-
+    {
+      "cniVersion":"0.3.0",
+      "name":"kube-router-net",
+      "plugins":[
+        {
+          "name":"kubernetes",
+          "type":"bridge",
+          "bridge":"kube-bridge",
+          "isDefaultGateway":true,
+          "ipam":{
+            "type":"host-local"
+          }
+        },
+        {
+          "type":"portmap",
+          "capabilities":{
+            "snat":true,
+            "portMappings":true
+          }
+        }
+      ]
+    }
