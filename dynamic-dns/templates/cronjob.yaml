@@ -1,0 +1,37 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: dynamic-dns
+  labels:
+    app: dynamic-dns
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: dynamic-dns
+        spec:
+
+          volumes:
+            - name: config
+              configMap:
+                name: dynamic-dns
+
+          containers:
+          - name: dynamic-dns
+            image: byrnedo/alpine-curl
+            command:
+              - /bin/sh
+              - /ddns.sh
+
+            envFrom:
+              - secretRef:
+                  name: dynamic-dns
+            volumeMounts:
+              - name: config
+                mountPath: /ddns.sh
+                subPath: ddns.sh
+
+          restartPolicy: OnFailure

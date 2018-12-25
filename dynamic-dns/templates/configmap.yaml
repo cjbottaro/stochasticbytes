@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-dns
+  labels:
+    app: dynamic-dns
+data:
+  ddns.sh: |
+{{ (tpl (.Files.Get "files/ddns.sh") .) | indent 4 }}
