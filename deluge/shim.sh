@@ -1,0 +1,2 @@
+sh watchdog.sh &
+./init $@

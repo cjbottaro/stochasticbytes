@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deluge
+  labels:
+    app: deluge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deluge
+  template:
+    metadata:
+      labels:
+        app: deluge
+    spec:
+
+      volumes:
+        {{- include "vpn-volumes" $ | indent 8 }}
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: deluge
+          hostPath:
+            path: /mnt/media/deluge
+
+      containers:
+        {{- include "vpn-container" $ | indent 8 }}
+
+        - name: deluge
+          image: linuxserver/deluge:latest
+          imagePullPolicy: Always
+          env:
+            # It's a container, just fucking run as root.
+            - name: PUID
+              value: "0"
+          volumeMounts:
+            - name: dev-net
+              mountPath: /dev/net
+            - name: localtime
+              mountPath: /etc/localtime
+            - name: deluge
+              mountPath: /config
+              subPath: config
+            - name: deluge
+              mountPath: /deluge/downloads
+              subPath: downloads
+          ports:
+            - containerPort: 8112

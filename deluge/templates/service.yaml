@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: deluge
+  labels:
+    app: deluge
+spec:
+  selector:
+    app: deluge
+  ports:
+    - port: 8112
+      targetPort: 8112
