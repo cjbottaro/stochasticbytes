@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr
+  labels:
+    app: sonarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarr
+  template:
+    metadata:
+      labels:
+        app: sonarr
+    spec:
+
+      volumes:
+        - name: media
+          hostPath:
+            path: /mnt/media
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+
+      containers:
+        - name: sonarr
+          image: linuxserver/sonarr:latest
+          imagePullPolicy: Always
+          env:
+            # It's a container, just fucking run as root.
+            - name: PUID
+              value: "0"
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
+            - name: media
+              mountPath: /config
+              subPath: sonarr
+            - name: media
+              mountPath: /tv
+              subPath: tv
+            # This has to match how nzbget sees its completed movies dir.
+            - name: media
+              mountPath: /nzbget/downloads/completed/TV
+              subPath: nzbget/completed/TV
+            # This has to match how deluge sees its completed downloads.
+            - name: media
+              mountPath: /deluge/downloads
+              subPath: deluge/downloads
+          ports:
+            - containerPort: 7878
