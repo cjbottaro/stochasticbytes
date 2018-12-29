@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emby
+  labels:
+    app: emby
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: emby
+  template:
+    metadata:
+      labels:
+        app: emby
+    spec:
+
+      volumes:
+        - name: media
+          hostPath:
+            path: /mnt/media
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+
+      containers:
+        - name: emby
+          image: emby/embyserver:beta
+          env:
+            - name: UID
+              value: "0"
+            - name: GID
+              value: "0"
+          volumeMounts:
+            - name: media
+              mountPath: /config
+              subPath: emby
+            - name: media
+              mountPath: /mnt/movies
+              subPath: movies
+            - name: media
+              mountPath: /mnt/tv
+              subPath: tv
+            - name: localtime
+              mountPath: /etc/localtime
+          ports:
+            - containerPort: 8096
