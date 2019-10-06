@@ -28,9 +28,9 @@ spec:
         - name: config
           configMap:
             name: nginx
-            items:
-              - key: nginx.conf
-                path: nginx.conf
+        - name: certs
+          secret:
+            secretName: certificates
 
       containers:
       - name: nginx
@@ -39,6 +39,12 @@ spec:
           - name: config
             mountPath: /etc/nginx/nginx.conf
             subPath: nginx.conf
+          - name: certs
+            mountPath: /etc/ssl/fullchain.pem
+            subPath: fullchain.pem
+          - name: certs
+            mountPath: /etc/ssl/privkey.pem
+            subPath: privkey.pem
         ports:
           - containerPort: 80
         readinessProbe:

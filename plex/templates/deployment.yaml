@@ -5,8 +5,6 @@ metadata:
   labels:
     app: plex
 spec:
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: plex
@@ -32,7 +30,7 @@ spec:
             - name: TZ
               value: US/Central
             - name: ADVERTISE_IP
-              value: http://pineview:32400,http://plex.cjbotta.ro
+              value: http://pineview:32400,https://plex.cjbotta.ro
           volumeMounts:
             - name: media
               mountPath: /mnt/media
