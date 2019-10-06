@@ -5,7 +5,6 @@ metadata:
   labels:
     app: emby
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: emby
@@ -15,17 +14,26 @@ spec:
         app: emby
     spec:
 
+      nodeSelector:
+        kubernetes.io/hostname: pineview
+
       volumes:
         - name: media
-          hostPath:
-            path: /mnt/media
+          nfs:
+            server: diskstation
+            path: /volume1/media
         - name: localtime
           hostPath:
             path: /etc/localtime
-
+        - name: dri
+          hostPath:
+            path: /dev/dri
+            
       containers:
         - name: emby
-          image: emby/embyserver:beta
+          image: emby/embyserver
+          securityContext:
+            privileged: true
           env:
             - name: UID
               value: "0"
@@ -36,12 +44,10 @@ spec:
               mountPath: /config
               subPath: emby
             - name: media
-              mountPath: /mnt/movies
-              subPath: movies
-            - name: media
-              mountPath: /mnt/tv
-              subPath: tv
+              mountPath: /mnt/media
             - name: localtime
               mountPath: /etc/localtime
+            - name: dri
+              mountPath: /dev/dri
           ports:
             - containerPort: 8096

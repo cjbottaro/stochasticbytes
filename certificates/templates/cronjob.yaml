@@ -1,0 +1,49 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: certificates
+  labels:
+    app: certificates
+
+spec:
+  schedule: "0 0 1 */2 *"       # First day of every other month at midnight.
+  successfulJobsHistoryLimit: 1 # Set to 1 or more if you want look at logs of past successful jobs
+  concurrencyPolicy: Forbid     # Don't allow more than one of these jobs to run at once
+
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: certificates
+            
+        spec:
+
+          restartPolicy: OnFailure
+
+          nodeSelector:
+            kubernetes.io/arch: amd64
+
+          serviceAccountName: certificates
+
+          volumes:
+            - name: secrets
+              secret:
+                secretName: certificates
+            - name: files
+              configMap:
+                name: certificates
+
+          containers:
+            - name: certs
+              image: cjbottaro/certificates
+              command:
+                - sh
+                - /run.sh
+              volumeMounts:
+                - name: secrets
+                  mountPath: /etc/dnsimple.ini
+                  subPath: dnsimple.ini
+                - name: files
+                  mountPath: /run.sh
+                  subPath: run.sh

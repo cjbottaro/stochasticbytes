@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+
+spec:
+  
+  selector:
+    matchLabels:
+      name: nginx
+
+  template:
+    metadata:
+      labels:
+        name: nginx
+        app: nginx
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+
+    spec:
+      
+      nodeSelector:
+        kubernetes.io/hostname: pineview
+
+      volumes:
+        - name: config
+          configMap:
+            name: nginx
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+
+      containers:
+      - name: nginx
+        image: nginx:1.15-alpine
+        volumeMounts:
+          - name: config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+        ports:
+          - containerPort: 80
+        readinessProbe:
+          httpGet:
+            port: 80
+            path: /ping

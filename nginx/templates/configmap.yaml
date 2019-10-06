@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+data:
+{{ (tpl (.Files.Glob "files/*").AsConfig . ) | indent 2 }}

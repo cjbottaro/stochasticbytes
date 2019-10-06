@@ -2,60 +2,179 @@
 
 This is for managing my VPS nodes, Docker images, Docker swarm, and personal websites.
 
-## Creating an Alpine image in DigitalOcean
+## Setup Raspberry Pi
 
-You like Alpine. As of this writing, DigitalOcean does not support Alpine natively.
-Luckily, someone made a script to install Alpine on a Debian Droplet. You can then
-save the Alpine install as an image and create Droplets from it.
+Prepare Rasberry Pi.
 
-Launch a Debian 9.3 Droplet, then run this:
-```
-wget -q https://github.com/bontibon/digitalocean-alpine/raw/master/digitalocean-alpine.sh
-chmod 755 digitalocean-alpine.sh
-./digitalocean-alpine.sh --rebuild
-```
+### Install various packages
 
-After it reboots, power it down, and create an image from it.
-
-## Initializing the Docker swarm
-
-Bring up any number of nodes in DigitalOcean using your Alpine image.
-
-Create a file at `ansible/inventory.ini` like:
-```
-[main_manager]
-10.0.0.1
-
-[managers]
-10.0.0.1
-10.0.0.2
-
-[workers]
-10.0.0.3
-10.0.0.4
-10.0.0.5
+```sh
+apt-get update
+apt-get install -y vim
+apt-get upgrade -y
+reboot
 ```
 
-Now run Ansible. Since it's all Dockerized, it should just work...
-```
-docker-compose run --rm ansible swarm_init.yml
-```
+### Disable swap
 
-## Adding nodes to the swarm
-
-Since you took great care in making the dang Ansible playbook idempotent, adding
-nodes should be as easy as modifying `ansible/inventory.ini` and rerunning:
-```
-docker-compose run --rm ansible swarm_init.yml
+```sh
+dphys-swapfile swapoff
+dphys-swapfile uninstall
+systemctl disable dphys-swapfile
 ```
 
-Definitely just _add_ nodes. Don't try to change the role of an existing node.
+### Disable Wifi and Bluetooth
 
-## Updating Let's Encrypt Certs
+```sh
+cat <<EOF >> /boot/config.txt
+dtoverlay=disable-wifi
+dtoverlay=disable-bt
+EOF
+reboot
+```
+
+## Kubernetes cluster
+
+Install master node, worker node, helm, etc.
+
+### Install Docker
+
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/#docker
+
+Needs to be modified a little bit to work with Raspbian (Buster).
+
+```sh
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+
+cat <<EOF >/etc/apt/sources.list.d/docker.list
+deb https://download.docker.com/linux/raspbian $(lsb_release -cs) stable
+EOF
+
+apt-get update && apt-get install --no-install-recommends -y docker-ce
+
+cat > /etc/docker/daemon.json <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+systemctl daemon-reload
+systemctl restart docker
+```
+
+### Install kubeadm
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+```sh
+apt-get update && apt-get install -y apt-transport-https curl
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+deb https://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+
+apt-get update
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+```
+
+### Enable legacy iptables
+
+Apparently kubeadm doesn't work with nftables which is what Raspbian Buster uses.
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#ensure-iptables-tooling-does-not-use-the-nftables-backend
+
+```sh
+update-alternatives --set iptables /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+update-alternatives --set arptables /usr/sbin/arptables-legacy
+update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+```
+
+### Run kubeadm init
+
+```sh
+kubeadm init --pod-network-cidr=100.64.0.0/16
+```
+
+Then update your `secrets.yaml` with the output of that command.
+```yaml
+kubeadm:
+  join_cmd: <blah>
+```
+
+## Install pod networking
 
 ```
-docker-compose run --rm certificates
-bundle exec ruby media_server/init.rb
+kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter-all-features-hostport.yaml
 ```
 
-Then ssh onto the media server and restart Nginx.
+Unfortunately, the kube-router manifests only support amd64, so we gotta do a little tweaking.
+
+Edit the daemonset.
+```
+kubectl edit ds -n kube-system kube-router
+```
+
+And patch.
+```yaml
+spec:
+  template:
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+```
+That will keep the pods off arm machines (like Raspberry Pi).
+
+Now we need to get the right ones on our arm machines.
+```
+kubectl get ds -n kube-system kube-router -o yaml > kube-router-arm.yaml
+```
+
+Edit that file and patch.
+```yaml
+metadata:
+  name: kube-router-arm
+spec:
+  template:
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/arch: arm
+      containers:
+        - image: xjjo/kube-router:arm-v0.3.2
+```
+
+Apply it.
+```sh
+kubectl apply -f kube-router-arm.yaml
+```
+
+Don't forget to get rid of `kube-proxy`.
+```sh
+kubectl -n kube-system delete ds kube-proxy
+```
+
+You should now have a working Kubernetes cluster.
+
+## Install tiller (Helm)
+
+```sh
+kubectl apply -f tiller-rbac.yaml
+
+# If using Helm > 2.14.3
+helm init --service-account tiller
+
+# Workaround for Helm <= 2.14.3 and Kubernetes 1.16.x
+# https://github.com/helm/helm/issues/6374#issuecomment-533427268
+helm init --service-account tiller --override spec.selector.matchLabels.'name'='tiller',spec.selector.matchLabels.'app'='helm' --output yaml | sed 's@apiVersion: extensions/v1beta1@apiVersion: apps/v1@' | kubectl apply -f -
+
+# Use arm build of tiller, set image: jessestuart/tiller:v2.14.3
+kubectl -n kube-system edit deployment tiller-deploy
+```

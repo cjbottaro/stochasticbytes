@@ -1,0 +1,31 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: certificates
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: certificates
+roleRef:
+  name: certificates
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: certificates
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: certificates

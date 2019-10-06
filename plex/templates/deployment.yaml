@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plex
+  labels:
+    app: plex
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: plex
+  template:
+    metadata:
+      labels:
+        app: plex
+    spec:
+
+      volumes:
+        - name: media
+          nfs:
+            server: diskstation
+            path: /volume1/media
+
+      nodeSelector:
+        kubernetes.io/hostname: pineview
+
+      containers:
+        - name: plex
+          image: plexinc/pms-docker
+          env:
+            - name: TZ
+              value: US/Central
+            - name: ADVERTISE_IP
+              value: http://pineview:32400,http://plex.cjbotta.ro
+          volumeMounts:
+            - name: media
+              mountPath: /mnt/media
+            - name: media
+              mountPath: /config
+              subPath: plex
+          ports:
+            - containerPort: 32400

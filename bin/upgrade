@@ -4,4 +4,4 @@ export AWS_PROFILE=stochasticbytes
 
 chart=${1%/}
 
-helm secrets upgrade $chart $chart -f $chart/values.yaml -f secrets.yaml
+helm secrets upgrade $chart $chart -f $chart/values.yaml -f secrets.dec.yaml

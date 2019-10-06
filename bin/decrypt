@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+sops -d kube-config.enc.yaml > kube-config.dec.yaml
+sops -d secrets.enc.yaml > secrets.dec.yaml

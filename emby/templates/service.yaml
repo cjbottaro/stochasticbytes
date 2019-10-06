@@ -5,8 +5,10 @@ metadata:
   labels:
     app: emby
 spec:
+  type: NodePort
   selector:
     app: emby
   ports:
     - port: 8096
       targetPort: 8096
+      nodePort: 30096
