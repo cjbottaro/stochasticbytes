@@ -1,4 +1,0 @@
-{{- define "vpn.auth" -}}
-{{ .Values.ivpn.username }}
-{{ .Values.ivpn.password }}
-{{ end }}

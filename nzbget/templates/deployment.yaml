@@ -15,11 +15,22 @@ spec:
         app: nzbget
     spec:
 
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
       volumes:
-        {{- include "vpn-volumes" $ | indent 8 }}
-        - name: nzbget
-          hostPath:
-            path: /mnt/media/nzbget
+        - name: vpn-config
+          configMap:
+            name: openvpn
+        - name: vpn-secret
+          secret:
+            secretName: openvpn
+        - name: dev-net
+          emptyDir: {}
+        - name: nas
+          nfs:
+            server: diskstation
+            path: /volume1/media
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -27,22 +38,57 @@ spec:
           configMap:
             name: nzbget
 
+      initContainers:
+        - name: config
+          image: alpine
+          volumeMounts:
+            - name: nas
+              mountPath: /mnt/nas
+            - name: config
+              mountPath: /nzbget.conf
+              subPath: nzbget.conf
+          command:
+            - /bin/sh
+            - -c
+            - |-
+              set -e
+              if [ ! -f /mnt/nas/nzbget/nzbget.conf ]; then
+                cp /nzbget.conf /mnt/nas/nzbget/nzbget.conf
+              fi
+
       containers:
-        {{- include "vpn-container" $ | indent 8 }}
+
+        - name: openvpn
+          image: cjbottaro/openvpn:latest
+          args:
+            - --config
+            - /etc/vpn.ovpn
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: vpn-config
+              mountPath: /etc/vpn.ovpn
+              subPath: vpn.ovpn
+            - name: vpn-secret
+              mountPath: /etc/vpn.auth
+              subPath: vpn.auth
+            - name: dev-net
+              mountPath: /dev/net
 
         - name: nzbget
           image: cjbottaro/nzbget:latest
           command:
             - ./nzbget
             - -s
+            - -c
+            - /mnt/nas/nzbget/nzbget.conf
           volumeMounts:
             - name: dev-net
               mountPath: /dev/net
-            - name: nzbget
-              mountPath: /nzbget/downloads
-            - name: config
-              mountPath: /nzbget/nzbget.conf
-              subPath: nzbget.conf
+            - name: nas
+              mountPath: /mnt/nas
             - name: localtime
               mountPath: /etc/localtime
           ports:

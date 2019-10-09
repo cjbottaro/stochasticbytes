@@ -24,18 +24,7 @@ services:
   certificates:
     image: cjbottaro/certificates
     build:
-      context: certificates
-    volumes:
-      - ./secrets:/secrets
-    command:
-      - certonly
-      - --non-interactive
-      - --agree-tos
-      - -m cjbottaro@alumni.utexas.net
-      - --dns-dnsimple
-      - --dns-dnsimple-credentials=/secrets/dnsimple.ini
-      - -d nutrition.cjbotta.ro
-      - -d radarr.cjbotta.ro
+      context: certificates/build
 
   radarr:
     image: cjbottaro/radarr:0.2.0.995
