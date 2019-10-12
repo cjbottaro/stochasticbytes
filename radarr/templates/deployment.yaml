@@ -15,10 +15,17 @@ spec:
         app: radarr
     spec:
 
+      nodeSelector:
+        kubernetes.io/hostname: pineview
+
       volumes:
-        - name: media
+        - name: config
           hostPath:
-            path: /mnt/media
+            path: /var/lib/radarr
+        - name: nas
+          nfs:
+            server: diskstation
+            path: /volume1/media
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -28,25 +35,22 @@ spec:
           image: linuxserver/radarr:latest
           imagePullPolicy: Always
           env:
-            # It's a container, just fucking run as root.
             - name: PUID
-              value: "0"
+              value: "0" # It's a container, just fucking run as root.
+          # The way I think downloads work is...
+          # radarr: "Hey nzbget, download this movie."
+          # nzbget: "Hey radarr, I downloaded this movie at /mnt/nas/nzbget/completed/this_movie."
+          # radarr: "Ok, I'm moving /mnt/nas/nzbget/completed/this_movie to /movies"
+          # In other words, they assume they are using the same file system.
           volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: nas
+              mountPath: /movies
+              subPath: movies
             - name: localtime
               mountPath: /etc/localtime
-            - name: media
-              mountPath: /config
-              subPath: radarr
-            - name: media
-              mountPath: /movies
-              subPath: plex/Movies
-            # This has to match how nzbget sees its completed movies dir.
-            - name: media
-              mountPath: /nzbget/downloads/completed/Movies
-              subPath: nzbget/completed/Movies
-            # This has to match how deluge sees its completed downloads.
-            - name: media
-              mountPath: /deluge/downloads
-              subPath: deluge/downloads
+            - name: nas
+              mountPath: /mnt/nas
           ports:
             - containerPort: 7878

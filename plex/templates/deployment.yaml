@@ -15,7 +15,10 @@ spec:
     spec:
 
       volumes:
-        - name: media
+        - name: config
+          hostPath:
+            path: /var/lib/plex
+        - name: nas
           nfs:
             server: diskstation
             path: /volume1/media
@@ -32,10 +35,9 @@ spec:
             - name: ADVERTISE_IP
               value: http://pineview:32400,https://plex.cjbotta.ro
           volumeMounts:
-            - name: media
-              mountPath: /mnt/media
-            - name: media
+            - name: nas
+              mountPath: /mnt/nas
+            - name: config
               mountPath: /config
-              subPath: plex
           ports:
             - containerPort: 32400

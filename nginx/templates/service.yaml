@@ -17,3 +17,7 @@ spec:
       port: 80
       targetPort: 80
       nodePort: 30080
+    - name: plex
+      port: 32400
+      targetPort: 32400
+      nodePort: 32400

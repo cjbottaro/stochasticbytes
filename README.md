@@ -4,32 +4,37 @@ This is for managing my VPS nodes, Docker images, Docker swarm, and personal web
 
 ## Setup Raspberry Pi
 
-Prepare Rasberry Pi.
-
-### Install various packages
-
 ```sh
+sudo bash
+
+# Set hostname and timezone
+raspi-config
+
+# Install stuff and upgrade
 apt-get update
 apt-get install -y vim
 apt-get upgrade -y
-reboot
-```
 
-### Disable swap
-
-```sh
+# Disable swap
 dphys-swapfile swapoff
 dphys-swapfile uninstall
 systemctl disable dphys-swapfile
-```
 
-### Disable Wifi and Bluetooth
-
-```sh
+# Disable wifi and bluetooth
 cat <<EOF >> /boot/config.txt
 dtoverlay=disable-wifi
 dtoverlay=disable-bt
 EOF
+
+# Setup ssh
+mkdir .ssh
+cat <<EOF >> .ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0vALsY+6CaDuhjZ2X/bXOnNReEfzvQsdAs6Iex0Hg/s+I4W3ydLk99turzYgic1jA4eshXhHPaY5Oh1Cs//6cmfdoB45u6uoqGdCzO/lVekYTE8wmoq4c7bUWv7nJT7VWH7xurGRIVlkXjy65Z9Jo//JBvnpYnWps79E9pHtbMiEhV5oWoa105GAyb3/RGJcnv0MaXkYpwEKiPyz9iPVhwDFzBfcfr7NPneFcWtvs9TimcrjWaUXGvEL+wDwNEyBkj5WJRMadl/PeKfGCESNAP00IKYO81MtX9eiGgA0mvOOm6cBWVcNezDxZOcrPuYTOGj2skz3s1vWDEgDXpcDiQ== cjbottaro
+EOF
+chmod 700 .ssh
+chmod 600 .ssh/authorized_keys
+
+# Reboot
 reboot
 ```
 
@@ -47,7 +52,7 @@ Needs to be modified a little bit to work with Raspbian (Buster).
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 
 cat <<EOF >/etc/apt/sources.list.d/docker.list
-deb https://download.docker.com/linux/raspbian $(lsb_release -cs) stable
+deb https://download.docker.com/linux/$(lsb_release -is | tr "[:upper:]" "[:lower:]") $(lsb_release -cs) stable
 EOF
 
 apt-get update && apt-get install --no-install-recommends -y docker-ce
@@ -112,56 +117,10 @@ kubeadm:
 
 ## Install pod networking
 
-```
-kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter-all-features-hostport.yaml
-```
-
-Unfortunately, the kube-router manifests only support amd64, so we gotta do a little tweaking.
-
-Edit the daemonset.
-```
-kubectl edit ds -n kube-system kube-router
-```
-
-And patch.
-```yaml
-spec:
-  template:
-    spec:
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
-```
-That will keep the pods off arm machines (like Raspberry Pi).
-
-Now we need to get the right ones on our arm machines.
-```
-kubectl get ds -n kube-system kube-router -o yaml > kube-router-arm.yaml
-```
-
-Edit that file and patch.
-```yaml
-metadata:
-  name: kube-router-arm
-spec:
-  template:
-    spec:
-      nodeSelector:
-        beta.kubernetes.io/arch: arm
-      containers:
-        - image: xjjo/kube-router:arm-v0.3.2
-```
-
-Apply it.
 ```sh
-kubectl apply -f kube-router-arm.yaml
-```
-
-Don't forget to get rid of `kube-proxy`.
-```sh
+kubectl -n kube-system apply -f kube-router.yaml
 kubectl -n kube-system delete ds kube-proxy
 ```
-
-You should now have a working Kubernetes cluster.
 
 ## Install tiller (Helm)
 
