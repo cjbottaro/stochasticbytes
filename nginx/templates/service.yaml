@@ -21,3 +21,7 @@ spec:
       port: 32400
       targetPort: 32400
       nodePort: 32400
+    - name: emby
+      port: 8096
+      targetPort: 8096
+      nodePort: 30896

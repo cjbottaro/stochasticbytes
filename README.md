@@ -137,3 +137,28 @@ helm init --service-account tiller --override spec.selector.matchLabels.'name'='
 # Use arm build of tiller, set image: jessestuart/tiller:v2.14.3
 kubectl -n kube-system edit deployment tiller-deploy
 ```
+
+# Media Server
+
+Running a media server in Kubernetes is challenging.
+
+## VPN and routing issues
+
+Even though it's possible to run VPN connections as sidecar containers, it screws with routing somehow: The container that is using the VPN won't be reachable by containers running on a different node.
+
+The workaround is to put all containers with a VPN sidecar _and all the containers that need to talk to them_ on the same node.
+
+```yaml
+nodeSelector:
+  kubernetes.io/hostname: vpn-node-name
+```
+
+## SQLite and NAS
+
+Just don't do it (as in, don't serve SQLite databases from your NAS). You'll run into all sorts of locking issues and your application will basically be broken.
+
+Workaround is to run a cronjob that rsyncs application's config dir to NAS, then have initContainers that check for the existance of the config dir on hostPath volumes and if they don't exist, rsync it from NAS.
+
+WARNING: Make sure the cronjobs are not running when the initContainers are rsync'ing from NAS to hostPath.
+
+## 

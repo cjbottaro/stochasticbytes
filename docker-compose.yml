@@ -2,14 +2,6 @@ version: "3"
 
 services:
 
-  alpine-glibc:
-    image: cjbottaro/alpine-glibc:3.7
-    build:
-      context: alpine
-      args:
-        ALPINE_VERSION: 3.7
-        GLIBC_VERSION: 2.27-r0
-
   openvpn:
     image: cjbottaro/openvpn:latest
     build:
@@ -26,9 +18,7 @@ services:
     build:
       context: certificates/build
 
-  radarr:
-    image: cjbottaro/radarr:0.2.0.995
+  rsync:
+    image: cjbottaro/rsync
     build:
-      context: radarr
-      args:
-        RADARR_VERSION: 0.2.0.995
+      context: rsync

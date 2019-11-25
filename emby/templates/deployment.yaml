@@ -18,7 +18,10 @@ spec:
         kubernetes.io/hostname: pineview
 
       volumes:
-        - name: media
+        - name: config
+          hostPath:
+            path: /var/lib/emby
+        - name: nas
           nfs:
             server: diskstation
             path: /volume1/media
@@ -40,11 +43,10 @@ spec:
             - name: GID
               value: "0"
           volumeMounts:
-            - name: media
+            - name: config
               mountPath: /config
-              subPath: emby
-            - name: media
-              mountPath: /mnt/media
+            - name: nas
+              mountPath: /mnt/nas
             - name: localtime
               mountPath: /etc/localtime
             - name: dri

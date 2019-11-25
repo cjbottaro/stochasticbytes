@@ -1,0 +1,11 @@
+names:
+  - plex
+  - emby
+  - radarr
+  - sonarr
+
+crontabs:
+  plex:   "0 * * * *"  # 0th  minute of every hour.
+  emby:   "5 * * * *"  # 5th  minute of every hour.
+  radarr: "10 * * * *" # 10th minute of every hour.
+  sonarr: "15 * * * *" # 15th minute of every hour.
