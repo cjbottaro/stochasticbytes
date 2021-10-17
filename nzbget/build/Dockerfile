@@ -1,7 +1,11 @@
-FROM alpine:3.7
+ARG ALPINE_VERSION
+FROM alpine:${ALPINE_VERSION}
+
 ARG NZBGET_VERSION
-ADD https://github.com/nzbget/nzbget/releases/download/v$NZBGET_VERSION/nzbget-$NZBGET_VERSION-bin-linux.run .
-RUN sh nzbget-$NZBGET_VERSION-bin-linux.run
+ARG NZBGET_RELEASE
+
+ADD ${NZBGET_RELEASE} nzbget-bin-linux.run
+RUN sh nzbget-bin-linux.run
 WORKDIR /nzbget
 ADD watchdog.sh shim.sh ./
 ENTRYPOINT ["/bin/sh", "shim.sh"]

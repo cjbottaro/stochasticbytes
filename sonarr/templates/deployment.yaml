@@ -48,4 +48,4 @@ spec:
             - name: nas
               mountPath: /mnt/nas
           ports:
-            - containerPort: 7878
+            - containerPort: 8989

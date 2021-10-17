@@ -1,7 +1,0 @@
-version: 0.3.2
-
-arches:
-  - name: amd64
-    image: docker.io/cloudnativelabs/kube-router:v
-  - name: arm
-    image: xjjo/kube-router:arm-v

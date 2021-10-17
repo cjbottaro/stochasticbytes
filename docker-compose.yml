@@ -5,13 +5,17 @@ services:
   openvpn:
     image: cjbottaro/openvpn:latest
     build:
-      context: openvpn
-    cap_add:
-      - NET_ADMIN
-    volumes:
-      - ./dallas.ovpn:/etc/vpn.ovpn
-      - ./auth.txt:/etc/vpn.auth
-    command: ["--config", "/etc/vpn.ovpn"]
+      context: openvpn/build
+      args:
+        ALPINE_VERSION: 3.14
+
+  nzbget:
+    image: cjbottaro/nzbget:latest
+    build:
+      context: nzbget/build
+      args:
+        ALPINE_VERSION: 3.14
+        NZBGET_RELEASE: https://github.com/nzbget/nzbget/releases/download/v21.2-r2333/nzbget-21.2-testing-r2333-bin-linux.run
 
   certificates:
     image: cjbottaro/certificates

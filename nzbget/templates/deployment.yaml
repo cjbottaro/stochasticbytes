@@ -13,10 +13,17 @@ spec:
     metadata:
       labels:
         app: nzbget
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
 
       nodeSelector:
         kubernetes.io/arch: amd64
+
+      dnsConfig:
+        nameservers:
+          - 8.8.8.8
+          - 8.8.4.4
 
       volumes:
         - name: vpn-config
@@ -37,24 +44,6 @@ spec:
         - name: config
           configMap:
             name: nzbget
-
-      initContainers:
-        - name: config
-          image: alpine
-          volumeMounts:
-            - name: nas
-              mountPath: /mnt/nas
-            - name: config
-              mountPath: /nzbget.conf
-              subPath: nzbget.conf
-          command:
-            - /bin/sh
-            - -c
-            - |-
-              set -e
-              if [ ! -f /mnt/nas/nzbget/nzbget.conf ]; then
-                cp /nzbget.conf /mnt/nas/nzbget/nzbget.conf
-              fi
 
       containers:
 
@@ -79,16 +68,21 @@ spec:
 
         - name: nzbget
           image: cjbottaro/nzbget:latest
+          imagePullPolicy: Always
           command:
             - ./nzbget
             - -s
             - -c
-            - /mnt/nas/nzbget/nzbget.conf
+            - nzbget.conf
           volumeMounts:
             - name: dev-net
               mountPath: /dev/net
+            - name: config
+              mountPath: /nzbget/nzbget.conf
+              subPath: nzbget.conf
             - name: nas
-              mountPath: /mnt/nas
+              mountPath: /nzbget/downloads
+              subPath: nzbget
             - name: localtime
               mountPath: /etc/localtime
           ports:

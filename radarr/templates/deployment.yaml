@@ -6,6 +6,8 @@ metadata:
     app: radarr
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: radarr
@@ -13,19 +15,25 @@ spec:
     metadata:
       labels:
         app: radarr
+
     spec:
 
-      nodeSelector:
-        kubernetes.io/hostname: pineview
+      # nodeSelector:
+      #   kubernetes.io/hostname: pineview
 
       volumes:
-        - name: config
-          hostPath:
-            path: /var/lib/radarr
+        - name: app-data
+          iscsi:
+            targetPortal: 192.168.1.113
+            iqn: iqn.2000-01.com.synology:diskstation.Target-1.77d659b9be
+            lun: 1
+            fsType: ext4
+            
         - name: nas
           nfs:
             server: diskstation
             path: /volume1/media
+            
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -37,20 +45,12 @@ spec:
           env:
             - name: PUID
               value: "0" # It's a container, just fucking run as root.
-          # The way I think downloads work is...
-          # radarr: "Hey nzbget, download this movie."
-          # nzbget: "Hey radarr, I downloaded this movie at /mnt/nas/nzbget/completed/this_movie."
-          # radarr: "Ok, I'm moving /mnt/nas/nzbget/completed/this_movie to /movies"
-          # In other words, they assume they are using the same file system.
           volumeMounts:
-            - name: config
+            - name: app-data
               mountPath: /config
             - name: nas
-              mountPath: /movies
-              subPath: movies
+              mountPath: /mnt/nas
             - name: localtime
               mountPath: /etc/localtime
-            - name: nas
-              mountPath: /mnt/nas
           ports:
-            - containerPort: 7878
+            - containerPort: 8989
