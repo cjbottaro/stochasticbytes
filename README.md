@@ -81,11 +81,18 @@ the hard drive.
 
 ## Kubernetes
 
-Raspberry Pi needs to enable cgroup stuff.
+```sh
+setup-alpine
+```
+
+This setups the rest of the environment (cgroup stuff, Docker, Kubernetes, other packages).
+```sh
+wget -qO- https://bit.ly/3jleHNB | sh
+```
 
 ```sh
 # Add to boot: cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1
-vim /boot/cmdline.txt
+sed -i '1 s/$/ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' /boot/cmdline.txt
 
 # Reboot
 reboot
@@ -103,7 +110,7 @@ vim /etc/apk/repositories
 apk update
 
 # Install Kubernetes, kubeadm, etc
-apk add kubernetes kubeadm kubelet cni-plugins docker
+apk add open-iscsi eudev blkid xfsprogs kubernetes kubeadm kubelet cni-plugins docker
 rc-update add docker default
 rc-update add kubelet default
 ```

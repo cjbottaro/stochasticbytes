@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+ALPINE_TARBALL = "alpine-rpi-3.14.2-aarch64.tar.gz"
+
+disk = `diskutil list | grep "external, physical"`.chomp
+disk, *_ = disk.split(" ")
+
+print "#{disk} -- does this look right? (Y/n) "
+choice = gets.downcase.chomp
+if not ["", "y", "yes"].include?(choice)
+  abort "Aborting, goodbye!"
+end
+
+tarball_path = File.expand_path("~/Downloads/#{ALPINE_TARBALL}")
+if not File.exists?(tarball_path)
+  abort "#{ALPINE_TARBALL} not found in ~/Downloads, goodbye... :("
+end
+
+overlay_path = File.expand_path("~/Downloads/headless.apkovl.tar.gz")
+if not File.exists?(overlay_path)
+  abort "headless.apkovl.tar.gz not found in ~/Downloads, goodbye... :("
+end
+
+if not system("sudo diskutil eraseDisk FAT32 ALPINE MBRFormat #{disk}")
+  abort "Formating #{disk} failed, goodbye... :("
+end
+
+if not system("cd /Volumes/ALPINE && tar xzf #{tarball_path}")
+  abort "Copying files to /Volumes/ALPINE failed, goodbye... :("
+end
+
+if not system("cp #{overlay_path} /Volumes/ALPINE")
+  abort "Copying headless.apkovl.tar.gz to /Volumes/ALPINE failed, goodbye... :("
+end
+
+exec "sudo diskutil umount /Volumes/ALPINE"
