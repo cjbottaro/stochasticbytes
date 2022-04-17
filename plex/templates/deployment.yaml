@@ -5,27 +5,26 @@ metadata:
   labels:
     app: plex
 spec:
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: plex
+
   template:
     metadata:
       labels:
         app: plex
     spec:
-
       volumes:
         - name: config
-          hostPath:
-            path: /var/lib/plex
+          persistentVolumeClaim:
+            claimName: plex
         - name: nas
           nfs:
             server: diskstation
             path: /volume1/media
-
-      nodeSelector:
-        kubernetes.io/hostname: pineview
-
       containers:
         - name: plex
           image: plexinc/pms-docker
@@ -33,8 +32,12 @@ spec:
           env:
             - name: TZ
               value: US/Central
-            - name: ADVERTISE_IP
-              value: http://192.168.1.10,http://plex.cjbotta.ro
+          env:
+            - name: PUID
+              value: "0"
+          env:
+            - name: PGID
+              value: "0"
           volumeMounts:
             - name: nas
               mountPath: /mnt/nas

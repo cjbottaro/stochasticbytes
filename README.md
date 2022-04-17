@@ -90,14 +90,6 @@ This setups the rest of the environment (cgroup stuff, Docker, Kubernetes, other
 wget -qO- https://bit.ly/3jleHNB | sh
 ```
 
-```sh
-# Add to boot: cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1
-sed -i '1 s/$/ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' /boot/cmdline.txt
-
-# Reboot
-reboot
-```
-
 Both need to do.
 
 ```sh
@@ -119,7 +111,7 @@ Init a master.
 
 ```sh
 # Init cluster
-kubeadm init --pod-network-cidr=100.64.0.0/16
+kubeadm init --apiserver-cert-extra-sans skyranger.cjbotta.ro --pod-network-cidr=100.64.0.0/16
 
 # Setup networking
 kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
@@ -196,5 +188,5 @@ iscsiadm -m node -p diskstation -T iqn.2000-01.com.synology:diskstation.Target-1
 
 Log out of a session.
 ```
-iscsiadm -m node -p diskstation -T iqn.2000-01.com.synology:diskstation.Target-1.77d659b9be -u
+iscsiadm -m node -p diskstation -u -T iqn.2000-01.com.synology:diskstation.Target-1.77d659b9be
 ```

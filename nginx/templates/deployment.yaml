@@ -21,9 +21,6 @@ spec:
 
     spec:
       
-      nodeSelector:
-        kubernetes.io/hostname: pineview
-
       volumes:
         - name: config
           configMap:

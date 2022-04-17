@@ -1,0 +1,15 @@
+apiVersion: v2
+appVersion: "1.0.1"
+description: Installs the Synology CSI Driver.
+home: https://github.com/christian-schlichtherle/synology-csi-chart
+keywords:
+  - Synology
+  - CSI Driver
+maintainers:
+  - name: Christian Schlichtherle
+    url: https://github.com/christian-schlichtherle
+name: synology-csi
+sources:
+  - https://github.com/christian-schlichtherle/synology-csi-chart/tree/main
+  - https://github.com/SynologyOpenSource/synology-csi/tree/main
+version: 0.3.1-SNAPSHOT

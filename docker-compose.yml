@@ -22,7 +22,9 @@ services:
     build:
       context: certificates/build
 
-  rsync:
-    image: cjbottaro/rsync
+  wireguard:
+    image: cjbottaro/wireguard:latest
     build:
-      context: rsync
+      context: wireguard/build
+      args:
+        ALPINE_VERSION: 3.15

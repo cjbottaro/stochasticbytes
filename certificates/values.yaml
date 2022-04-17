@@ -1,10 +1,4 @@
-account: cjbottaro@alumni.utexas.net
+email: cjb@cjbotta.ro
 domains:
   - cjbotta.ro
-  - nutrition.cjbotta.ro
-  - plex.cjbotta.ro
-  - emby.cjbotta.ro
-  - nzb.cjbotta.ro
-  - torrent.cjbotta.ro
-  - radarr.cjbotta.ro
-  - sonarr.cjbotta.ro
+  - "*.cjbotta.ro"

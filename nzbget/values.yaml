@@ -1,0 +1,12 @@
+nzbget:
+  control_username: cjbottaro
+  servers:
+    - id: Server1
+      name: Newshosting
+      host: news.newshosting.com
+      port: 443
+      username: cjbottaro
+      encryption: yes
+      connections: 100
+      retention: 4990
+      ip_protocol: ipv4

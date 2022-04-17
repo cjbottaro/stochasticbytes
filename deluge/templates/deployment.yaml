@@ -16,34 +16,49 @@ spec:
     spec:
 
       volumes:
-        {{- include "vpn-volumes" $ | indent 8 }}
+        - name: wireguard
+          configMap:
+            name: wireguard
+        - name: config
+          persistentVolumeClaim:
+            claimName: deluge
+        - name: nas
+          nfs:
+            server: diskstation
+            path: /volume1/media
         - name: localtime
           hostPath:
             path: /etc/localtime
-        - name: deluge
-          hostPath:
-            path: /mnt/media/deluge
+
+      initContainers:
+        - name: wireguard
+          image: alpine
+          securityContext:
+            privileged: true
+          command:
+            - /bin/sh
+            - -c
+            - apk add wireguard-tools && wg-quick up vpn
+          volumeMounts:
+            - name: wireguard
+              mountPath: /etc/wireguard
 
       containers:
-        {{- include "vpn-container" $ | indent 8 }}
-
         - name: deluge
           image: linuxserver/deluge:latest
           imagePullPolicy: Always
           env:
-            # It's a container, just fucking run as root.
             - name: PUID
               value: "0"
+            - name: GUID
+              value: "0"
           volumeMounts:
-            - name: dev-net
-              mountPath: /dev/net
-            - name: localtime
-              mountPath: /etc/localtime
-            - name: deluge
+            - name: config
               mountPath: /config
               subPath: config
-            - name: deluge
-              mountPath: /deluge/downloads
-              subPath: downloads
+            - name: nas
+              mountPath: /mnt/nas
+            - name: localtime
+              mountPath: /etc/localtime
           ports:
             - containerPort: 8112

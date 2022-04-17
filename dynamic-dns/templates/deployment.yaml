@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynamic-dns
+  labels:
+    app: dynamic-dns
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: dynamic-dns
+  template:
+    metadata:
+      labels:
+        app: dynamic-dns
+    spec:
+      containers:
+      - name: dynamic-dns
+        image: cjbottaro/dynamic-dns:latest
+        imagePullPolicy: Always
+        env:
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: dynamic-dns
+              key: TOKEN
