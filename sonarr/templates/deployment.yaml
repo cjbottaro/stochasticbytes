@@ -6,6 +6,8 @@ metadata:
     app: sonarr
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sonarr
@@ -15,13 +17,10 @@ spec:
         app: sonarr
     spec:
 
-      nodeSelector:
-        kubernetes.io/hostname: pineview
-
       volumes:
         - name: config
-          hostPath:
-            path: /var/lib/sonarr
+          persistentVolumeClaim:
+            claimName: sonarr
         - name: nas
           nfs:
             server: diskstation
@@ -36,16 +35,15 @@ spec:
           imagePullPolicy: Always
           env:
             - name: PUID
-              value: "0" # It's a container, just fucking run as root.
+              value: "0"
+            - name: GUID
+              value: "0"
           volumeMounts:
             - name: config
               mountPath: /config
             - name: nas
-              mountPath: /tv
-              subPath: tv
+              mountPath: /mnt/nas
             - name: localtime
               mountPath: /etc/localtime
-            - name: nas
-              mountPath: /mnt/nas
           ports:
             - containerPort: 8989
