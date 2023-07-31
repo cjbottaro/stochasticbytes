@@ -4,6 +4,7 @@ certbot certonly \
 -m {{ .Values.email }} \
 --dns-dnsimple \
 --dns-dnsimple-credentials /etc/dnsimple.ini \
+--dns-dnsimple-propagation-seconds 60 \
 -d {{ .Values.domains | join "," }}
 
 # Update secret with kubectl https://stackoverflow.com/a/45881259

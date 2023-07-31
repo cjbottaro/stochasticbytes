@@ -6,3 +6,4 @@ secrets/
 target
 *.dec
 *.dec.*
+tmp/

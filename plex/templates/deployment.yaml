@@ -32,10 +32,8 @@ spec:
           env:
             - name: TZ
               value: US/Central
-          env:
             - name: PUID
               value: "0"
-          env:
             - name: PGID
               value: "0"
           volumeMounts:

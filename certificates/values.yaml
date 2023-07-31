@@ -2,3 +2,5 @@ email: cjb@cjbotta.ro
 domains:
   - cjbotta.ro
   - "*.cjbotta.ro"
+  - skylake.superbolide.io
+  - "*.skylake.superbolide.io"
