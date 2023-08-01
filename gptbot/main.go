@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/pkoukk/tiktoken-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -23,7 +25,10 @@ type strategyF func(
 // type jsonM map[string]any
 
 var (
-	_strategy strategyF
+	_strategy         strategyF
+	_gptModel         string
+	_tt               *tiktoken.Tiktoken
+	_maxHistoryTokens int
 )
 
 func main() {
@@ -44,14 +49,48 @@ func main() {
 		panic("OPENAI_TOKEN is required")
 	}
 
+	// Choose our model.
+	_gptModel = os.Getenv("MODEL")
+	if _gptModel == "" {
+		_gptModel = "gpt-3.5-turbo"
+	}
+	fmt.Printf("Using model %s\n", _gptModel)
+
 	// Choose our strategy.
-	switch os.Getenv("STRATEGY") {
-	case "1":
-		_strategy = strategy1
-	case "2":
-		_strategy = strategy2
-	case "", "3": // Default
-		_strategy = strategy3
+	{
+		strategy := os.Getenv("STRATEGY")
+		if strategy == "" {
+			strategy = "3"
+		}
+		switch strategy {
+		case "1":
+			_strategy = strategy1
+		case "2":
+			_strategy = strategy2
+		case "3": // Default
+			_strategy = strategy3
+		}
+		fmt.Printf("Using strategy %s\n", strategy)
+	}
+
+	// Setup our tokenizer.
+	_tt, err = tiktoken.EncodingForModel(_gptModel)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set max history tokens.
+	{
+		maxHistoryTokens := os.Getenv("MAX_HISTORY_TOKENS")
+		if maxHistoryTokens == "" {
+			_maxHistoryTokens = 2000
+		} else {
+			_maxHistoryTokens, err = strconv.Atoi(maxHistoryTokens)
+			if err != nil {
+				panic(err)
+			}
+		}
+		fmt.Printf("Max history tokens set to %d\n", _maxHistoryTokens)
 	}
 
 	c := openai.NewClient(openai_token)
@@ -91,11 +130,13 @@ func handleMessage(c *openai.Client, s *discordgo.Session, m *discordgo.MessageC
 	members, err := s.GuildMembers(m.GuildID, "", 100)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
+		return
 	}
 
-	chatlog, err := s.ChannelMessages(m.ChannelID, 50, "", "", "")
+	chatlog, err := getMessageHistory(s, m.ChannelID)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
+		return
 	}
 	chatlog = chatlog[1:]
 
@@ -282,6 +323,36 @@ func strategy3(members []*discordgo.Member, chatlog []*discordgo.Message, m *dis
 	}
 
 	return output
+}
+
+func getMessageHistory(s *discordgo.Session, channelID string) ([]*discordgo.Message, error) {
+	tokens := 0
+	lastMessageID := ""
+	d := time.Now()
+	var messages []*discordgo.Message
+
+	defer func() {
+		fmt.Printf("%d messages, %d tokens, %s\n\n",
+			len(messages), tokens, time.Since(d).String(),
+		)
+	}()
+
+	for {
+		batch, err := s.ChannelMessages(channelID, 100, lastMessageID, "", "")
+		if err != nil {
+			return messages, err
+		}
+
+		for _, m := range batch {
+			count := len(_tt.Encode(m.ContentWithMentionsReplaced(), nil, nil))
+			if count+tokens > _maxHistoryTokens {
+				return messages, nil
+			}
+			messages = append(messages, m)
+			tokens = count + tokens
+			lastMessageID = m.ID
+		}
+	}
 }
 
 func membersJson(members []*discordgo.Member) string {
