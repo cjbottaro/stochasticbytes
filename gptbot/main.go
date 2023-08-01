@@ -13,6 +13,19 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+type strategyF func(
+	[]*discordgo.Member,
+	[]*discordgo.Message,
+	*discordgo.MessageCreate,
+	*discordgo.Session,
+) []openai.ChatCompletionMessage
+
+// type jsonM map[string]any
+
+var (
+	_strategy strategyF
+)
+
 func main() {
 
 	discord_token := os.Getenv("DISCORD_TOKEN")
@@ -29,6 +42,16 @@ func main() {
 	openai_token := os.Getenv("OPENAI_TOKEN")
 	if openai_token == "" {
 		panic("OPENAI_TOKEN is required")
+	}
+
+	// Choose our strategy.
+	switch os.Getenv("STRATEGY") {
+	case "1":
+		_strategy = strategy1
+	case "2":
+		_strategy = strategy2
+	case "", "3": // Default
+		_strategy = strategy3
 	}
 
 	c := openai.NewClient(openai_token)
@@ -65,8 +88,6 @@ func handleMessage(c *openai.Client, s *discordgo.Session, m *discordgo.MessageC
 
 	s.ChannelTyping(m.ChannelID)
 
-	fmt.Printf("Incoming message: %s\n", m.Content)
-
 	members, err := s.GuildMembers(m.GuildID, "", 100)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
@@ -76,34 +97,27 @@ func handleMessage(c *openai.Client, s *discordgo.Session, m *discordgo.MessageC
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
 	}
+	chatlog = chatlog[1:]
 
 	// Reverse the messages so the oldest is first.
 	for i, j := 0, len(chatlog)-1; i < j; i, j = i+1, j-1 {
 		chatlog[i], chatlog[j] = chatlog[j], chatlog[i]
 	}
 
-	// var chatlogHistory []map[string]string
-	// for _, message := range chatlog {
-	// 	member := findMemberById(members, message.Author.ID)
-
-	// 	chatlogHistory = append(chatlogHistory, map[string]string{
-	// 		"Name":     member.Nick,
-	// 		"UserID":   message.Author.ID,
-	// 		"Username": message.Author.Username,
-	// 		"Message":  message.Content,
-	// 	})
-	// }
-	// chatlogJson, _ := json.Marshal(chatlogHistory)
-
+	// The initial prompt.
 	messages := []openai.ChatCompletionMessage{
 		{
 			Role: openai.ChatMessageRoleSystem,
 			Content: `You are a Discord bot for a Discord server named Superbolide.
-								Your name and username is ChatGPT, and you use the OpenAI API. 
-								You should refer to people only by their name when responding.
+								Server members can be identified by their name, username, or userid.
+								You will be provided with member info JSON.
+								Your name and username is ChatGPT.
+								You should refer to people by their name.
 								You should not use username or userid in responses unless specifically asked to.
+								You will be provided with the conversation history via JSON chat logs.
 								You should not refer to the "conversation history" in your responses.
-								Answer as if you are the bot that said the things in the chat logs.`,
+								You should not refer to the "chat history" in your responses.
+								Be brief with your answers unless otherwise instructed.`,
 		},
 		{
 			Role:    openai.ChatMessageRoleSystem,
@@ -111,27 +125,58 @@ func handleMessage(c *openai.Client, s *discordgo.Session, m *discordgo.MessageC
 		},
 	}
 
-	messages = append(messages, model3(members, chatlog, m, s)...)
+	// Make messages describing the conversation so far.
+	messages = append(messages, _strategy(members, chatlog, m, s)...)
 
+	// Append the actual user prompt.
 	messages = append(messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
-		Content: m.Content,
+		Content: m.ContentWithMentionsReplaced(),
 		Name:    m.Author.Username,
 	})
+
+	fmt.Printf("%s: %s\n\n", m.Author.Username, m.ContentWithMentionsReplaced())
 
 	resp, err := c.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
 		Messages: messages,
+		// Functions: []openai.FunctionDefinition{
+		// 	{
+		// 		Name:        "web_search",
+		// 		Description: "Search the web (via Google) for current events or information",
+		// 		Parameters: jsonM{
+		// 			"type": "object",
+		// 			"properties": jsonM{
+		// 				"query": jsonM{
+		// 					"type":        "string",
+		// 					"description": "Google search query string",
+		// 				},
+		// 			},
+		// 			"required": []string{"query"},
+		// 		},
+		// 	},
+		// },
 	})
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("My head hurts: %v\n", err))
 		return
 	}
 
+	fmt.Printf("resp: %+v\n\n", resp)
+
+	if resp.Choices[0].FinishReason == openai.FinishReasonFunctionCall {
+		msg := fmt.Sprintf("Hold on, I need to use the internet: %s, %s\n",
+			resp.Choices[0].Message.FunctionCall.Name,
+			resp.Choices[0].Message.FunctionCall.Arguments,
+		)
+		s.ChannelMessageSend(m.ChannelID, msg)
+		return
+	}
+
 	s.ChannelMessageSend(m.ChannelID, resp.Choices[0].Message.Content)
 }
 
-func model1(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
+func strategy1(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
 	var output []openai.ChatCompletionMessage
 
 	for _, message := range chatlog {
@@ -167,7 +212,7 @@ func model1(members []*discordgo.Member, chatlog []*discordgo.Message, m *discor
 	return output
 }
 
-func model2(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
+func strategy2(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
 	var output []openai.ChatCompletionMessage
 	var data []map[string]string
 	var nickname string
@@ -198,31 +243,34 @@ func model2(members []*discordgo.Member, chatlog []*discordgo.Message, m *discor
 	return output
 }
 
-func model3(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
+func strategy3(members []*discordgo.Member, chatlog []*discordgo.Message, m *discordgo.MessageCreate, s *discordgo.Session) []openai.ChatCompletionMessage {
 	var output []openai.ChatCompletionMessage
+	var content string
 
 	for _, message := range chatlog {
+		content = message.ContentWithMentionsReplaced()
+
+		fmt.Printf("%s: %s\n\n", message.Author.Username, content)
+
 		if message.Author.ID == s.State.User.ID {
 			output = append(output, openai.ChatCompletionMessage{
 				Role:    openai.ChatMessageRoleAssistant,
 				Name:    "ChatGPT",
-				Content: message.Content,
+				Content: content,
 			})
-			fmt.Printf("ChatGPT: %s\n\n", message.Content)
 		} else if includesUser(message.Mentions, s.State.User) {
 			output = append(output, openai.ChatCompletionMessage{
 				Role:    openai.ChatMessageRoleUser,
 				Name:    message.Author.Username,
-				Content: message.Content,
+				Content: content,
 			})
-			fmt.Printf("%s to ChatGPT: %s\n\n", message.Author.Username, message.Content)
 		} else {
 			member := findMemberById(members, message.Author.ID)
 			data := map[string]string{
 				"Name":     member.Nick,
 				"UserID":   message.Author.ID,
 				"Username": message.Author.Username,
-				"Message":  message.Content,
+				"Message":  content,
 			}
 			json, _ := json.Marshal(data)
 			output = append(output, openai.ChatCompletionMessage{
@@ -230,49 +278,10 @@ func model3(members []*discordgo.Member, chatlog []*discordgo.Message, m *discor
 				Name:    message.Author.Username,
 				Content: "A chat log entry was made as JSON: " + string(json),
 			})
-			fmt.Printf("%s: %s\n\n", message.Author.Username, message.Content)
 		}
 	}
 
 	return output
-}
-
-func debug(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// members, err := s.GuildMembers(m.GuildID, "", 100)
-	// if err != nil {
-	// 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
-	// }
-
-	// chatlog, err := s.ChannelMessages(m.ChannelID, 50, "", "", "")
-	// if err != nil {
-	// 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Discord is not cooperating: %v\n", err))
-	// }
-
-	// // Reverse the messages so the oldest is first.
-	// for i, j := 0, len(chatlog)-1; i < j; i, j = i+1, j-1 {
-	// 	chatlog[i], chatlog[j] = chatlog[j], chatlog[i]
-	// }
-
-	// var chatlogHistory []map[string]string
-	// for _, message := range chatlog {
-	// 	member := findMemberById(members, message.Author.ID)
-	// 	var nickname string
-	// 	if message.Author.ID == s.State.User.ID {
-	// 		nickname = "ChatGPT"
-	// 	} else {
-	// 		nickname = member.Nick
-	// 	}
-
-	// 	chatlogHistory = append(chatlogHistory, map[string]string{
-	// 		"Name":     nickname,
-	// 		"UserID":   message.Author.ID,
-	// 		"Username": message.Author.Username,
-	// 		"Message":  message.Content,
-	// 	})
-	// }
-	// chatlogJson, _ := json.Marshal(chatlogHistory)
-
-	// fmt.Printf("chatlogJson: %v\n", string(chatlogJson))
 }
 
 func membersJson(members []*discordgo.Member) string {
