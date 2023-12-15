@@ -1,6 +1,78 @@
 # stochasticbytes
 
-Home Kubernetes cluster.
+Home Kubernetes clusters and media server.
+
+## Architecture
+
+![](https://storage.cjbotta.ro/home_arch.png)
+
+## Router Setup
+
+Turn on static ip mappings for some key servers:
+* `mini` (ingress, native Nginx, ssl termination)
+* `diskstation` (Koob iscsi volumes need ip addresses)
+
+Port forward 80 and 443 to `mini` which acts as our ingress and is running Nginx
+natively and does SSL termination.
+
+Public DNS will resolve `cjbotta.ro` to the router's external ip address, but
+when on the local network, we want it to resolve directly to the ingress
+internal ip address. Non-consumer grade router to the rescue...
+
+```
+ssh admin@192.168.1.1
+
+configure
+delete service dns forwarding options
+set service dns forwarding options server=/storage.cjbotta.ro/8.8.8.8
+set service dns forwarding options address=/registry.cjbotta.ro/192.168.1.10
+set service dns forwarding options address=/cjbotta.ro/${INGRESS_IPADDRESS}
+show service dns forwarding options
+commit
+```
+
+## Container Registry Setup
+
+The pod is run on `firebrand` (the `stochasticbytes` Koob cluster). It uses an
+iscsi/lun from `diskstation` named `registry`, which must be mounted at
+`/var/lib/registry` in the pod.
+
+The DNS for the registry is `registry.cjbotta.ro`. That hits the ingress
+which does both SSL termination and basic auth. Note that the basic auth
+only affects that one domain and not `*.cjbotta.ro`.
+
+Both the ingress and internal router must set:
+```
+client_max_body_size 0;
+```
+for large pushes, but care is made to only affect that one subdomain; all the
+other domains should have a sensible `client_max_body_size`.
+
+There is a Koob secret of type `docker-registry` for pods to use.
+
+Hosts can just `docker login registry.cjbotta.ro` with the creds manually.
+
+**IMPORTANT**
+
+You must periodically garbage collect the registry with:
+```
+kubectl exec registry-57f4b4f879-bqz9w -- registry garbage-collect --delete-untagged /etc/docker/registry/config.yml
+```
+
+But a push _cannot_ be in progress otherwise you risk data corruption!
+
+## k3s on Alpine
+
+This is easier than running real Koob via kubeadm. It works great when you want
+just one machine be the control plain and worker nodes at the same time.
+
+```
+apk add k3s
+rc-update k3s default
+
+# Kubeconfig
+cat /etc/rancher/k3s/k3s.yaml
+```
 
 ## Alpine on Raspberry Pi
 
