@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stash
+  labels:
+    app: stash
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stash
+
+  template:
+    metadata:
+      labels:
+        app: stash
+    spec:
+      volumes:
+        - name: stash
+          persistentVolumeClaim:
+            claimName: stash
+        - name: nas
+          nfs:
+            server: diskstation
+            path: /volume1/media
+      containers:
+        - name: stash
+          image: stashapp/stash:latest
+          imagePullPolicy: Always
+          env:
+            - name: STASH_STASH
+              value: /mnt/nas/porn
+            - name: STASH_GENERATED
+              value: /stash/generated
+            - name: STASH_METADATA
+              value: /stash/metadata
+            - name: STASH_CACHE
+              value: /stash/cache
+            - name: STASH_CONFIG_FILE
+              value: /stash/config.yaml
+          volumeMounts:
+            - name: nas
+              mountPath: /mnt/nas
+            - name: stash
+              mountPath: /stash
+          ports:
+            - containerPort: 9999

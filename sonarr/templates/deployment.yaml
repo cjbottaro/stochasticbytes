@@ -19,8 +19,12 @@ spec:
 
       volumes:
         - name: config
-          persistentVolumeClaim:
-            claimName: sonarr
+          iscsi:
+            targetPortal: {{ .Values.diskstation.ip_address }}
+            iqn: {{ .Values.sonarr.iqn }}
+            lun: 1
+            fsType: ext4
+            readOnly: false
         - name: nas
           nfs:
             server: diskstation

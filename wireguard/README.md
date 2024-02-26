@@ -69,6 +69,8 @@ to figure out what to set `AllowedIPs` to.
 
 https://www.procustodibus.com/blog/2021/03/wireguard-allowedips-calculator/
 
+**IMPORTANT** Make sure you put the endpoint's ip address into the calculator.
+
 ## Starting
 
 ```

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+case $1 in
+  "regcred" | "regcreds")
+    aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin $SB_REGISTRY
+    kubectl delete secret docker-registry regcred --ignore-not-found --wait
+    kubectl create secret docker-registry regcred --docker-server=https://$SB_REGISTRY --docker-username=AWS --docker-password=$(aws ecr get-login-password --region us-east-2)
+  ;;
+
+  "kshell")
+    exec $SB_HOME/go/kshell $@
+  ;;
+esac

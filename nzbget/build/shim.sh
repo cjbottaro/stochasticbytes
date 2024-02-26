@@ -1,2 +1,0 @@
-sh watchdog.sh &
-./nzbget $@

@@ -21,13 +21,17 @@ spec:
         - name: wireguard
           configMap:
             name: wireguard
+        - name: config
+          iscsi:
+            targetPortal: {{ .Values.diskstation.ip_address }}
+            iqn: {{ .Values.sabnzbd.iqn }}
+            lun: 1
+            fsType: ext4
+            readOnly: false
         - name: nas
           nfs:
             server: diskstation
             path: /volume1/media
-        - name: config
-          persistentVolumeClaim:
-            claimName: sabnzbd
         - name: localtime
           hostPath:
             path: /etc/localtime

@@ -1,20 +1,11 @@
-# Add the metallb repo
+# Install
+
+https://metallb.universe.tf/installation
 
 ```
 helm repo add metallb https://metallb.github.io/metallb
 helm repo update
-```
-
-# Install/Upgrade
-
-
-## Skylake
-```
-helm install metallb metallb/metallb -n kube-system -f metallb/values.yaml
-```
-
-See: https://metallb.universe.tf/installation/#upgrade
-
-```
-helm upgrade metallb metallb/metallb -f metallb/values.yaml
+helm install metallb metallb/metallb -n kube-system
+kubectl apply -f address_pool.yaml
+kubectl apply -f advertisement.yaml
 ```

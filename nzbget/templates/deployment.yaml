@@ -6,6 +6,8 @@ metadata:
     app: nzbget
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: nzbget
@@ -17,23 +19,10 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
 
-      nodeSelector:
-        kubernetes.io/arch: amd64
-
-      dnsConfig:
-        nameservers:
-          - 8.8.8.8
-          - 8.8.4.4
-
       volumes:
-        - name: vpn-config
+        - name: wireguard
           configMap:
-            name: openvpn
-        - name: vpn-secret
-          secret:
-            secretName: openvpn
-        - name: dev-net
-          emptyDir: {}
+            name: wireguard
         - name: nas
           nfs:
             server: diskstation
@@ -45,38 +34,28 @@ spec:
           configMap:
             name: nzbget
 
-      containers:
-
-        - name: openvpn
-          image: cjbottaro/openvpn:latest
-          args:
-            - --config
-            - /etc/vpn.ovpn
+      initContainers:
+        - name: wireguard
+          image: cjbottaro/wireguard
+          imagePullPolicy: Always
+          command:
+            - wg-quick
+            - up
+            - vpn
           securityContext:
             capabilities:
               add:
                 - NET_ADMIN
           volumeMounts:
-            - name: vpn-config
-              mountPath: /etc/vpn.ovpn
-              subPath: vpn.ovpn
-            - name: vpn-secret
-              mountPath: /etc/vpn.auth
-              subPath: vpn.auth
-            - name: dev-net
-              mountPath: /dev/net
+            - name: wireguard
+              mountPath: /etc/wireguard/vpn.conf
+              subPath: vpn.conf
 
+      containers:
         - name: nzbget
-          image: cjbottaro/nzbget:latest
+          image: linuxserver/nzbget
           imagePullPolicy: Always
-          command:
-            - ./nzbget
-            - -s
-            - -c
-            - nzbget.conf
           volumeMounts:
-            - name: dev-net
-              mountPath: /dev/net
             - name: config
               mountPath: /nzbget/nzbget.conf
               subPath: nzbget.conf

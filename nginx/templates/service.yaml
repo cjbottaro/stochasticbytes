@@ -5,7 +5,7 @@ metadata:
   labels:
     name: nginx
   annotations:
-    metallb.universe.tf/address-pool: default
+    metallb.universe.tf/loadBalancerIPs: {{ .Values.nginx.ip_address }}
 spec:
   type: LoadBalancer
   selector:
@@ -14,6 +14,3 @@ spec:
     - name: http
       port: 80
       targetPort: 80
-    - name: https
-      port: 443
-      targetPort: 443
