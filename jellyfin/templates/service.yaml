@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: emby
+  name: jellyfin
   labels:
-    app: emby
+    app: jellyfin
 spec:
   selector:
-    app: emby
+    app: jellyfin
   ports:
     - port: 8096
       targetPort: 8096

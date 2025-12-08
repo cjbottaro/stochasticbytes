@@ -36,6 +36,9 @@ postgres:
 registry:
   iqn: iqn.2000-01.com.synology:diskstation.Target-14.efaf369cac9
 
+jellyfin:
+  iqn: iqn.2000-01.com.synology:diskstation.Target-16.efaf369cac9
+
 wireguard:
   address: 172.29.19.47/32
   endpoint: us-tx6.wg.ivpn.net:48574

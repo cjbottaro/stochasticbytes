@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  labels:
+    app: jellyfin
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyfin
+
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      volumes:
+        - name: iscsi
+          iscsi:
+            targetPortal: {{ .Values.diskstation.ip_address }}
+            iqn: {{ .Values.jellyfin.iqn }}
+            lun: 1
+            fsType: ext4
+            readOnly: false
+        - name: nas
+          nfs:
+            server: diskstation
+            path: /volume1/media
+      containers:
+        - name: jellyfin
+          image: jellyfin/jellyfin
+          imagePullPolicy: Always
+          env:
+            - name: JELLYFIN_PublishedServerUrl
+              value: https://jellyfin.cjbotta.ro
+          volumeMounts:
+            - name: nas
+              mountPath: /mnt/nas
+            - name: iscsi
+              subPath: config
+              mountPath: /config
+            - name: iscsi
+              subPath: cache
+              mountPath: /cache
+          ports:
+            - containerPort: 8096
